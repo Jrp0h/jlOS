@@ -1,59 +1,9 @@
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-
-enum vga_color {
-    VGA_COLOR_BLACK = 0,
-    VGA_COLOR_BLUE = 1,
-    VGA_COLOR_GREEN = 2,
-    VGA_COLOR_CYAN = 3,
-    VGA_COLOR_RED = 4,
-    VGA_COLOR_MAGENTA = 5,
-    VGA_COLOR_BROWN = 6,
-    VGA_COLOR_LIGHT_GRAY = 7,
-    VGA_COLOR_DARK_GRAY = 8,
-    VGA_COLOR_LIGHT_BLUE = 9,
-    VGA_COLOR_LIGHT_GREEN = 10,
-    VGA_COLOR_LIGHT_CYAN = 11,
-    VGA_COLOR_LIGHT_RED = 12,
-    VGA_COLOR_LIGHT_MAGENTA = 13,
-    VGA_COLOR_LIGHT_BROWN = 14,
-    VGA_COLOR_WHITE = 15
-};
-
-static inline uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg) {
-    return fg | bg << 4;
-}
-
-static inline uint16_t vga_entry(unsigned char uc , uint8_t color) {
-    return (uint16_t) uc | (uint16_t) color << 8;
-}
-
-size_t strlen(const char* str)  {
-    size_t len = 0;
-
-    while(str[len])
-        len++;
-
-    return len;
-}
-
-static const size_t VGA_WIDTH = 80;
-static const size_t VGA_HEIGHT = 25;
+#include "terminal.h"
+#include "string.h"
 
 size_t terminal_row, terminal_column;
 uint8_t terminal_color;
 uint16_t* terminal_buffer;
-
-void terminal_initialize();
-void terminal_write_string(const char* data);
-void terminal_set_color (uint8_t color);
-void terminal_write(const char* data, size_t size);
-void terminal_put_char(const char c);
-void terminal_put_entry_at(char c, uint8_t color, size_t x, size_t y);
-void terminal_put_rainbow_text(const char* c);
-void terminal_reset_color();
-
 
 void terminal_initialize()  {
     terminal_row = 0;
@@ -136,11 +86,13 @@ void terminal_reset_color() {
     terminal_set_color(vga_entry_color(VGA_COLOR_LIGHT_GRAY, VGA_COLOR_BLACK));
 }
 
-void kernel_main(void) {
-    terminal_initialize();
-
-    terminal_put_rainbow_text("Hello from the kernel");
-    /* terminal_reset_color(); */
-    /* terminal_write_string("This is normal color\n\tTab works"); */
-    /* terminal_set_color(vga_entry_color(VGA_COLOR_LIGHT_BLUE, VGA_COLOR_BLACK)); */
+void terminal_scroll_text() {
+    // Move all the text one step up
+    for(size_t y = 1; y < VGA_HEIGHT - 1; y++)
+        for(size_t x = 0; x < VGA_WIDTH; x++)
+            terminal_buffer[(y - 1) * VGA_WIDTH + x] = terminal_buffer[y * VGA_HEIGHT + x];
+    
+    // Reset bottom row
+    for(size_t x = 0; x < VGA_WIDTH; x++)
+        terminal_put_entry_at(' ', vga_entry_color(VGA_COLOR_LIGHT_GRAY, VGA_COLOR_BLACK), VGA_HEIGHT - 1, x);
 }
